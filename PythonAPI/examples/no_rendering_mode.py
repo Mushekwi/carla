@@ -142,8 +142,6 @@ MODULE_WORLD = 'WORLD'
 MODULE_HUD = 'HUD'
 MODULE_INPUT = 'INPUT'
 
-PIXELS_PER_METER = 12
-
 MAP_DEFAULT_SCALE = 0.1
 HERO_DEFAULT_SCALE = 1.0
 
@@ -432,8 +430,7 @@ class TrafficLightSurfaces(object):
 
 
 class MapImage(object):
-    def __init__(self, carla_world, carla_map, pixels_per_meter, show_triggers, show_connections, show_spawn_points):
-        self._pixels_per_meter = pixels_per_meter
+    def __init__(self, carla_world, carla_map, show_triggers, show_connections, show_spawn_points):
         self.scale = 1.0
         self.show_triggers = show_triggers
         self.show_connections = show_connections
@@ -449,7 +446,9 @@ class MapImage(object):
         self.width = max(max_x - min_x, max_y - min_y)
         self._world_offset = (min_x, min_y)
 
-        width_in_pixels = int(self._pixels_per_meter * self.width)
+        # Maximum size of a Pygame surface
+        width_in_pixels = (1 << 14) - 1
+        self._pixels_per_meter = int( width_in_pixels / self.width)
 
         self.big_map_surface = pygame.Surface((width_in_pixels, width_in_pixels)).convert()
         self.draw_road_map(self.big_map_surface, carla_world, carla_map, self.world_to_pixel, self.world_to_pixel_width)
@@ -882,7 +881,6 @@ class ModuleWorld(object):
         self.map_image = MapImage(
             carla_world=self.world,
             carla_map=self.town_map,
-            pixels_per_meter=PIXELS_PER_METER,
             show_triggers=self.args.show_triggers,
             show_connections=self.args.show_connections,
             show_spawn_points=self.args.show_spawn_points)
@@ -1363,8 +1361,8 @@ class ModuleInput(object):
                         self.wheel_offset = 1.0
                 elif event.button == 5:
                     self.wheel_offset -= self.wheel_amount
-                    if self.wheel_offset <= 0.1:
-                        self.wheel_offset = 0.1
+                    if self.wheel_offset <= 0.01:
+                        self.wheel_offset = 0.01
 
     def _parse_keys(self, milliseconds):
         keys = pygame.key.get_pressed()
